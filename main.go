@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/ralucas/rpi-poller/crawler"
 	"github.com/ralucas/rpi-poller/rpi"
@@ -19,7 +20,11 @@ func main() {
 
 	c := crawler.New()
 
-	c.Start()
-	logger.Println("browser started")
-	c.Crawl(sites)
+	for {
+		if err := c.Crawl(sites); err != nil {
+			logger.Printf("%+v", err)
+		}
+
+		time.Sleep(10 * time.Second)
+	}
 }

@@ -1,8 +1,7 @@
 package repository
 
 import (
-	"fmt"
-
+	"github.com/ralucas/rpi-poller/repository/providers"
 	"github.com/ralucas/rpi-poller/rpi"
 )
 
@@ -11,6 +10,17 @@ type Repository interface {
 	SetStockStatus(site string, productName string, status rpi.RPiStockStatus) error
 }
 
-func buildID(site string, productName string) string {
-	return fmt.Sprintf("%s_%s", site, productName)
+type Provider string
+
+const (
+	InMemory Provider = "in-memory"
+)
+
+func New(provider Provider) Repository {
+	switch provider {
+	case InMemory:
+		return providers.NewInMemoryStore()
+	}
+
+	return nil
 }

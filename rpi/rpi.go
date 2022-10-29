@@ -32,6 +32,7 @@ type RPiStockStatus int
 const (
 	OutOfStock RPiStockStatus = iota
 	InStock
+	Unknown
 )
 
 func GetSites() ([]RPiSite, error) {
@@ -55,9 +56,11 @@ func StringToStatus(s string) RPiStockStatus {
 
 	if strings.Contains(prepared, "out") {
 		return OutOfStock
+	} else if strings.Contains(prepared, "in") {
+		return InStock
 	}
 
-	return InStock
+	return Unknown
 }
 
 func StatusToString(s RPiStockStatus) string {
