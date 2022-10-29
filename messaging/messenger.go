@@ -1,7 +1,9 @@
 package messaging
 
-import "github.com/ralucas/rpi-poller/messaging/providers"
-import "github.com/ralucas/rpi-poller/messaging/message"
+import (
+	"github.com/ralucas/rpi-poller/messaging/message"
+	"github.com/ralucas/rpi-poller/messaging/providers"
+)
 
 type Messenger interface {
 	Send(msg message.Message) error
@@ -14,7 +16,7 @@ const (
 )
 
 func New(provider Provider) Messenger {
-	switch(provider) {
+	switch provider {
 	case SMS:
 		return &providers.SMS{}
 	}

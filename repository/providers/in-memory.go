@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ralucas/rpi-poller/repository/value"
 	"github.com/ralucas/rpi-poller/repository/util"
+	"github.com/ralucas/rpi-poller/repository/value"
 	"github.com/ralucas/rpi-poller/rpi"
 )
 
