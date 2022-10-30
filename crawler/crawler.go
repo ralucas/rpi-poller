@@ -88,9 +88,10 @@ func (c *Crawler) crawlSite(ctx context.Context, site rpi.RPiSite, errorc chan e
 		c.store.SetStockStatus(site.Name, result.ProductName, stockStatus)
 
 		if stockStatus == rpi.InStock {
+			subject := "RPi In Stock Alert"
 			msg := fmt.Sprintf("***** IN STOCK ALERT: %s - %s *****", site.Name, result.ProductName)
 			c.logger.Printf(msg)
-			err := c.messenger.Send(message.New(msg))
+			err := c.messenger.Send(message.New(subject, msg, ""))
 			if err != nil {
 				c.logger.Printf("failed to send message: %+v", err)
 			}

@@ -1,15 +1,27 @@
 package message
 
 type Message struct {
-	message string
+	subject    string
+	message    string
+	receipient string
 }
 
-func New(msg string) Message {
+func New(subject string, msg string, receipient string) Message {
 	return Message{
-		message: msg,
+		subject:    subject,
+		message:    msg,
+		receipient: receipient,
 	}
 }
 
 func (m Message) GetMessage() string {
 	return m.message
+}
+
+func (m Message) GetSubject() string {
+	return m.subject
+}
+
+func (m Message) GetReceipient() string {
+	return m.receipient
 }
