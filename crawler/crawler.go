@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sync"
 	"time"
 
 	"github.com/chromedp/chromedp"
@@ -27,7 +26,6 @@ type Crawler struct {
 	logger    *log.Logger
 	store     repository.Repository
 	messenger messaging.Messenger
-	wg        sync.WaitGroup
 }
 
 func New() *Crawler {
@@ -39,21 +37,21 @@ func New() *Crawler {
 }
 
 func (c *Crawler) Crawl(sites []rpi.RPiSite) error {
-	// create context
-	ctx, cancel := chromedp.NewContext(context.Background())
-	defer cancel()
+	var cancel context.CancelFunc
+	var ctx context.Context
 
 	errorc := make(chan error)
 
 	for _, site := range sites {
+		ctx, cancel = context.WithCancel(context.Background())
 		go c.crawlSite(ctx, site, errorc)
-		ctx, _ = context.WithTimeout(ctx, TIMEOUT_SEC*time.Second)
-		ctx, cancel = chromedp.NewContext(ctx)
-		defer cancel()
 	}
+
+	defer cancel()
 
 	for range sites {
 		if err := <-errorc; err != nil {
+			cancel()
 			return err
 		}
 	}
@@ -62,13 +60,18 @@ func (c *Crawler) Crawl(sites []rpi.RPiSite) error {
 }
 
 func (c *Crawler) crawlSite(ctx context.Context, site rpi.RPiSite, errorc chan error) {
+	// create context
+	ctx, cancel := chromedp.NewContext(ctx)
+	defer cancel()
+
 	// starting browser
 	if err := chromedp.Run(ctx); err != nil {
 		c.logger.Fatalf("failed starting browser %v\n", err)
 		errorc <- err
 	}
 
-	ctx, _ = context.WithTimeout(ctx, TIMEOUT_SEC*time.Second)
+	ctx, cancel = context.WithTimeout(ctx, TIMEOUT_SEC*time.Second)
+	defer cancel()
 
 	actions := []chromedp.Action{chromedp.Navigate(site.CategoryUrl)}
 

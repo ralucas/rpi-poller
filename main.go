@@ -1,12 +1,19 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"time"
 
 	"github.com/ralucas/rpi-poller/crawler"
 	"github.com/ralucas/rpi-poller/rpi"
 )
+
+var pollTimeout int
+
+func init() {
+	flag.IntVar(&pollTimeout, "t", 10, "poll timeout (in seconds)")
+}
 
 func main() {
 	logger := log.Default()
@@ -25,6 +32,6 @@ func main() {
 			logger.Printf("%+v", err)
 		}
 
-		time.Sleep(10 * time.Second)
+		time.Sleep(time.Duration(pollTimeout) * time.Second)
 	}
 }
