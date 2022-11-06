@@ -28,12 +28,17 @@ type Crawler struct {
 	messenger messaging.Messenger
 }
 
-func New() *Crawler {
+func New() (*Crawler, error) {
+	m, err := messaging.New(messaging.EmailToSMS, messaging.Config{})
+	if err != nil {
+		return nil, err
+	}
+
 	return &Crawler{
 		logger:    log.Default(),
 		store:     repository.New(repository.InMemory),
-		messenger: messaging.New(messaging.SMS),
-	}
+		messenger: m,
+	}, nil
 }
 
 func (c *Crawler) Crawl(sites []rpi.RPiSite) error {

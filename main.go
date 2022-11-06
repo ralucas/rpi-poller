@@ -7,6 +7,8 @@ import (
 
 	"github.com/ralucas/rpi-poller/crawler"
 	"github.com/ralucas/rpi-poller/rpi"
+	
+	"github.com/kelseyhightower/envconfig"
 )
 
 var pollTimeout int
@@ -20,12 +22,17 @@ func main() {
 
 	logger.Println("Running rpi poller...")
 
+	err := envconfig.Process("myapp", &s)
+
 	sites, err := rpi.GetSites()
 	if err != nil {
 		logger.Fatal(err)
 	}
 
-	c := crawler.New()
+	c, err := crawler.New()
+	if err != nil {
+		logger.Fatal(err)
+	}
 
 	for {
 		if err := c.Crawl(sites); err != nil {
