@@ -1,60 +1,98 @@
 package providers
 
 import (
-	"bytes"
+	"context"
 	"fmt"
-	"net/smtp"
-	"net/url"
+	"log"
+	"os"
+
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
+	"google.golang.org/api/gmail/v1"
+	"google.golang.org/api/option"
 
 	"github.com/ralucas/rpi-poller/messaging/message"
 )
 
 type EmailToSMS struct {
-	hostname string
-	port     string
-	username string
-	password string
+	service *gmail.UsersMessagesService
+	logger  *log.Logger
 }
 
 type EmailToSMSConfig struct {
-	Server   string
-	Username string
-	Password string
+	CredentialsFilePath string
 }
 
-func NewEmailToSMS(config EmailToSMSConfig) (*EmailToSMS, error) {
-	u, err := url.Parse(config.Server)
+func NewEmailToSMS(config EmailToSMSConfig, logger *log.Logger) (*EmailToSMS, error) {
+	svc, err := createService(config.CredentialsFilePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create email to sms provider: %v", err)
 	}
 
 	return &EmailToSMS{
-		hostname: u.Hostname(),
-		port:     u.Port(),
-		username: config.Username,
-		password: config.Password,
+		service: svc,
+		logger:  logger,
 	}, nil
 }
 
-func (e *EmailToSMS) Send(msg message.Message) error {
-	auth := smtp.PlainAuth("", e.username, e.password, e.hostname)
-	address := fmt.Sprintf("%s:%s", e.hostname, e.port)
-	from := fmt.Sprintf("%s@%s", e.username, e.hostname)
+// createService creates the gmail user messages service used for sending emails.
+func createService(credentialsPath string) (*gmail.UsersMessagesService, error) {
+	ctx := context.Background()
+	b, err := os.ReadFile(credentialsPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read client secret file: %v", err)
+	}
 
-	return smtp.SendMail(address, auth, from, []string{msg.GetReceipient()}, e.messageBytes(msg))
+	creds, err := google.CredentialsFromJSON(ctx, b, gmail.GmailSendScope)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse credentials: %v", err)
+	}
+
+	client := oauth2.NewClient(ctx, creds.TokenSource)
+
+	gmailService, err := gmail.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve Gmail client: %v", err)
+	}
+
+	return gmail.NewUsersMessagesService(gmailService), nil
 }
 
-func (e *EmailToSMS) messageBytes(msg message.Message) []byte {
-	var bb bytes.Buffer
+func (e *EmailToSMS) Send(msg message.Message) error {
+	sendCall := e.service.Send("me", newGmailMessage(msg))
 
-	bb.WriteString("To: ")
-	bb.WriteString(msg.GetReceipient())
-	bb.WriteString("\r\n")
-	bb.WriteString("Subject: ")
-	bb.WriteString(msg.GetSubject())
-	bb.WriteString("\r\n\r\n")
-	bb.WriteString(msg.GetMessage())
-	bb.WriteString("\r\n")
+	sentMsg, err := sendCall.Do()
+	if err != nil {
+		return fmt.Errorf("failed in sending the message: %v", err)
+	}
 
-	return bb.Bytes()
+	e.logger.Printf("sent message [%d]", sentMsg.ServerResponse.HTTPStatusCode)
+
+	return nil
+}
+
+func newGmailMessage(msg message.Message) *gmail.Message {
+	headers := []*gmail.MessagePartHeader{
+		{
+			Name:  "To",
+			Value: msg.GetReceipient(),
+		}, {
+			Name:  "Subject",
+			Value: msg.GetSubject(),
+		},
+	}
+
+	body := &gmail.MessagePartBody{
+		Data: msg.GetMessage(),
+		Size: int64(len(msg.GetMessage())),
+	}
+
+	part := &gmail.MessagePart{
+		Body:    body,
+		Headers: headers,
+	}
+
+	return &gmail.Message{
+		Payload: part,
+	}
 }

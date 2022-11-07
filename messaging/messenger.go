@@ -22,12 +22,12 @@ type Config struct {
 	providers.EmailToSMSConfig
 }
 
-func New(provider Provider, config Config) (Messenger, error) {
+func New(provider Provider, config Config, logger) (Messenger, error) {
 	switch provider {
 	case SMS:
 		return &providers.SMS{}, nil
 	case EmailToSMS:
-		return providers.NewEmailToSMS(config.EmailToSMSConfig)
+		return providers.NewEmailToSMS(config.EmailToSMSConfig, logger)
 	}
 
 	return nil, fmt.Errorf("no such provider: %s", provider)

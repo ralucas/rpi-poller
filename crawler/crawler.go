@@ -28,15 +28,15 @@ type Crawler struct {
 	messenger messaging.Messenger
 }
 
-func New() (*Crawler, error) {
-	m, err := messaging.New(messaging.EmailToSMS, messaging.Config{})
+func New(logger *log.Logger) (*Crawler, error) {
+	m, err := messaging.New(messaging.EmailToSMS, messaging.Config{}, logger)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Crawler{
-		logger:    log.Default(),
-		store:     repository.New(repository.InMemory),
+		logger:    logger,
+		store:     repository.New(repository.InMemory, logger),
 		messenger: m,
 	}, nil
 }

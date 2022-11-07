@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"log"
+
 	"github.com/ralucas/rpi-poller/repository/providers"
 	"github.com/ralucas/rpi-poller/rpi"
 )
@@ -16,10 +18,10 @@ const (
 	InMemory Provider = "in-memory"
 )
 
-func New(provider Provider) Repository {
+func New(provider Provider, logger *log.Logger) Repository {
 	switch provider {
 	case InMemory:
-		return providers.NewInMemoryStore()
+		return providers.NewInMemoryStore(logger)
 	}
 
 	return nil

@@ -2,6 +2,7 @@ package providers
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -11,13 +12,15 @@ import (
 )
 
 type InMemoryStore struct {
-	store map[string]value.Value
-	mu    sync.Mutex
+	logger *log.Logger
+	store  map[string]value.Value
+	mu     sync.Mutex
 }
 
-func NewInMemoryStore() *InMemoryStore {
+func NewInMemoryStore(l *log.Logger) *InMemoryStore {
 	return &InMemoryStore{
-		store: make(map[string]value.Value),
+		logger: l,
+		store:  make(map[string]value.Value),
 	}
 }
 
