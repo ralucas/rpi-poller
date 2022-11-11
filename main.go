@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"time"
 
@@ -12,14 +11,9 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
-var pollTimeout int
-
-func init() {
-	flag.IntVar(&pollTimeout, "t", 10, "poll timeout (in seconds)")
-}
-
 type AppConfig struct {
 	messaging.Config
+	PollTimeout int
 }
 
 func main() {
@@ -28,17 +22,19 @@ func main() {
 	logger.Println("Running rpi poller...")
 
 	a := AppConfig{}
-
 	err := envconfig.Process("", &a)
+	if err != nil {
+		logger.Fatalf("failed to process config: %+v", err)
+	}
 
 	sites, err := rpi.GetSites()
 	if err != nil {
-		logger.Fatal(err)
+		logger.Fatalf("failed to get sites: %+v", err)
 	}
 
 	c, err := crawler.New(logger)
 	if err != nil {
-		logger.Fatal(err)
+		logger.Fatalf("crawler creation failed: %+v", err)
 	}
 
 	for {
@@ -46,6 +42,6 @@ func main() {
 			logger.Printf("%+v", err)
 		}
 
-		time.Sleep(time.Duration(pollTimeout) * time.Second)
+		time.Sleep(time.Duration(a.PollTimeout) * time.Second)
 	}
 }

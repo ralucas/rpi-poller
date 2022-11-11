@@ -15,7 +15,7 @@ type Messenger interface {
 type Provider string
 
 const (
-	SMS Provider = "sms"
+	SMS        Provider = "sms"
 	EmailToSMS Provider = "emailToSMS"
 )
 
