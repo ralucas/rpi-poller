@@ -20,7 +20,7 @@ const (
 )
 
 type Config struct {
-	providers.EmailToSMSConfig
+	EmailToSMS providers.EmailToSMSConfig
 }
 
 func New(provider Provider, config Config, logger *log.Logger) (Messenger, error) {
@@ -28,7 +28,7 @@ func New(provider Provider, config Config, logger *log.Logger) (Messenger, error
 	case SMS:
 		return &providers.SMS{}, nil
 	case EmailToSMS:
-		return providers.NewEmailToSMS(config.EmailToSMSConfig, logger)
+		return providers.NewEmailToSMS(config.EmailToSMS, logger)
 	}
 
 	return nil, fmt.Errorf("no such provider: %s", provider)
