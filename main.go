@@ -5,14 +5,12 @@ import (
 	"time"
 
 	"github.com/ralucas/rpi-poller/crawler"
-	"github.com/ralucas/rpi-poller/messaging"
 	"github.com/ralucas/rpi-poller/rpi"
 
 	"github.com/spf13/viper"
 )
 
 type AppConfig struct {
-	Messaging      messaging.Config
 	Crawler        crawler.Config
 	PollTimeoutSec int
 }

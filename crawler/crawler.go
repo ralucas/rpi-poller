@@ -15,6 +15,7 @@ import (
 
 type Config struct {
 	TimeoutSec int
+	Messaging  messaging.Config
 }
 
 type Result struct {
@@ -33,7 +34,7 @@ type Crawler struct {
 }
 
 func New(config Config, logger *log.Logger) (*Crawler, error) {
-	m, err := messaging.New(messaging.EmailToSMS, messaging.Config{}, logger)
+	m, err := messaging.New(messaging.EmailToSMS, config.Messaging, logger)
 	if err != nil {
 		return nil, err
 	}
