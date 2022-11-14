@@ -10,6 +10,6 @@ type SMS struct {
 	logger *log.Logger
 }
 
-func (s *SMS) Send(msg message.Message) error {
+func (s *SMS) Send(recipient string, msg message.Message) error {
 	return nil
 }

@@ -15,7 +15,6 @@ import (
 
 type Config struct {
 	TimeoutSec int
-	Messaging  messaging.Config
 }
 
 type Result struct {
@@ -29,20 +28,15 @@ type Result struct {
 type Crawler struct {
 	logger    *log.Logger
 	store     repository.Repository
-	messenger messaging.Messenger
+	messenger *messaging.MessengerManager
 	config    Config
 }
 
-func New(config Config, logger *log.Logger) (*Crawler, error) {
-	m, err := messaging.New(messaging.EmailToSMS, config.Messaging, logger)
-	if err != nil {
-		return nil, err
-	}
-
+func New(mm *messaging.MessengerManager, config Config, logger *log.Logger) (*Crawler, error) {
 	return &Crawler{
 		logger:    logger,
 		store:     repository.New(repository.InMemory, logger),
-		messenger: m,
+		messenger: mm,
 		config:    config,
 	}, nil
 }
@@ -70,7 +64,7 @@ func (c *Crawler) Crawl(sites []rpi.RPiSite) error {
 
 				c.logger.Printf("sending message: %s", msg)
 
-				err := c.messenger.Send(message.New(subject, msg, ""))
+				err := c.messenger.Notify(message.New(subject, msg))
 				if err != nil {
 					c.logger.Printf("failed to send message: %+v", err)
 				}

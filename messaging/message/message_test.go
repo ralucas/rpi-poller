@@ -10,11 +10,9 @@ import (
 func TestMessage(t *testing.T) {
 	testSubj := "test-subject"
 	testMsg := "test-message"
-	testRec := "test-receipient"
 
-	m := message.New(testSubj, testMsg, testRec)
+	m := message.New(testSubj, testMsg)
 
 	assert.Equal(t, testSubj, m.GetSubject())
 	assert.Equal(t, testMsg, m.GetMessage())
-	assert.Equal(t, testRec, m.GetReceipient())
 }

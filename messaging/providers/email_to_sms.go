@@ -26,7 +26,8 @@ const (
 type EmailToSMS struct {
 	service             *gmail.UsersMessagesService
 	logger              *log.Logger
-	sender              EmailSender
+	emailSender         EmailSender
+	smtpSendMail        SMTPSendMail
 	credentialsFilePath string
 	hostname            string
 	port                string
@@ -43,60 +44,65 @@ type EmailToSMSConfig struct {
 	Password            string
 }
 
-type EmailToSMSBuilder struct {
-	e *EmailToSMS
-}
+type EmailToSMSOption func(*EmailToSMS)
 
-func (b *EmailToSMSBuilder) WithOauth2(credentialsFilePath string) *EmailToSMSBuilder {
-	b.e.sender = GmailOAuth2
-	b.e.credentialsFilePath = credentialsFilePath
+type SMTPSendMail func(addr string, a smtp.Auth, from string, to []string, msg []byte) error
 
-	return b
-}
-
-func (b *EmailToSMSBuilder) WithSMTP(hostname, port, username, password string) *EmailToSMSBuilder {
-	b.e.sender = SMTP
-	b.e.hostname = hostname
-	b.e.port = port
-	b.e.username = username
-	b.e.password = password
-
-	return b
-}
-
-func (b *EmailToSMSBuilder) Build() (*EmailToSMS, error) {
-	if b.e.sender == Unknown {
-		return nil, fmt.Errorf("must build with oauth2 or smtp")
+func WithSMTPSendMailFunc(s SMTPSendMail) EmailToSMSOption {
+	return func(e *EmailToSMS) {
+		e.smtpSendMail = s
 	}
+}
 
-	if b.e.sender == GmailOAuth2 {
-		err := b.e.createService()
+func NewEmailToSMS(config EmailToSMSConfig, logger *log.Logger, options ...EmailToSMSOption) (*EmailToSMS, error) {
+	var e *EmailToSMS
+
+	switch config.Sender {
+	case Unknown:
+		return nil, fmt.Errorf("must build with oauth2 or smtp")
+	case GmailOAuth2:
+		e = &EmailToSMS{
+			emailSender:         GmailOAuth2,
+			credentialsFilePath: config.CredentialsFilePath,
+			logger:              logger,
+		}
+		err := e.createService()
 		if err != nil {
 			return nil, fmt.Errorf("failed to create oauth2 service %v", err)
 		}
-	}
-
-	return b.e, nil
-}
-
-func NewEmailToSMSBuilder(logger *log.Logger) *EmailToSMSBuilder {
-	e := &EmailToSMS{
-		logger: logger,
-	}
-
-	return &EmailToSMSBuilder{e}
-}
-
-func (e *EmailToSMS) Send(msg message.Message) error {
-	switch e.sender {
-	case GmailOAuth2:
-		return e.sendWithGmailOAuth2(msg)
 	case SMTP:
-		return e.sendWithSMTP(msg)
+		e = &EmailToSMS{
+			emailSender:  SMTP,
+			hostname:     config.Hostname,
+			port:         config.Port,
+			username:     config.Username,
+			password:     config.Password,
+			smtpSendMail: smtp.SendMail,
+			logger:       logger,
+		}
 	default:
-		return fmt.Errorf("unknown sender: %s", e.sender)
+		return nil, fmt.Errorf("bad sender: %s", config.Sender)
+	}
+
+	for _, opt := range options {
+		opt(e)
+	}
+
+	return e, nil
+}
+
+func (e *EmailToSMS) Send(recipient string, msg message.Message) error {
+	switch e.emailSender {
+	case GmailOAuth2:
+		return e.sendWithGmailOAuth2(recipient, msg)
+	case SMTP:
+		return e.sendWithSMTP(recipient, msg)
+	default:
+		return fmt.Errorf("unknown sender: %s", e.emailSender)
 	}
 }
+
+// GMAIL
 
 // createService creates the gmail user messages service used for sending emails.
 func (e *EmailToSMS) createService() error {
@@ -121,8 +127,8 @@ func (e *EmailToSMS) createService() error {
 	return nil
 }
 
-func (e *EmailToSMS) sendWithGmailOAuth2(msg message.Message) error {
-	sendCall := e.service.Send("me", newGmailMessage(msg))
+func (e *EmailToSMS) sendWithGmailOAuth2(recipient string, msg message.Message) error {
+	sendCall := e.service.Send("me", newGmailMessage(recipient, msg))
 
 	sentMsg, err := sendCall.Do()
 	if err != nil {
@@ -134,11 +140,11 @@ func (e *EmailToSMS) sendWithGmailOAuth2(msg message.Message) error {
 	return nil
 }
 
-func newGmailMessage(msg message.Message) *gmail.Message {
+func newGmailMessage(reciepient string, msg message.Message) *gmail.Message {
 	headers := []*gmail.MessagePartHeader{
 		{
 			Name:  "To",
-			Value: msg.GetReceipient(),
+			Value: reciepient,
 		}, {
 			Name:  "Subject",
 			Value: msg.GetSubject(),
@@ -160,19 +166,21 @@ func newGmailMessage(msg message.Message) *gmail.Message {
 	}
 }
 
-func (e *EmailToSMS) sendWithSMTP(msg message.Message) error {
+// SMTP
+
+func (e *EmailToSMS) sendWithSMTP(recipient string, msg message.Message) error {
 	auth := smtp.PlainAuth("", e.username, e.password, e.hostname)
 	address := fmt.Sprintf("%s:%s", e.hostname, e.port)
 	from := fmt.Sprintf("%s@%s", e.username, e.hostname)
 
-	return smtp.SendMail(address, auth, from, []string{msg.GetReceipient()}, e.messageBytes(msg))
+	return e.smtpSendMail(address, auth, from, []string{recipient}, e.messageBytes(recipient, msg))
 }
 
-func (e *EmailToSMS) messageBytes(msg message.Message) []byte {
+func (e *EmailToSMS) messageBytes(recipient string, msg message.Message) []byte {
 	var bb bytes.Buffer
 
 	bb.WriteString("To: ")
-	bb.WriteString(msg.GetReceipient())
+	bb.WriteString(recipient)
 	bb.WriteString("\r\n")
 	bb.WriteString("Subject: ")
 	bb.WriteString(msg.GetSubject())
