@@ -57,11 +57,13 @@ func (c *Crawler) Crawl(sites []rpi.RPiSite) error {
 		go c.crawlSite(site, errorc, resultc)
 	}
 
+	var errors []error
+
 	for range sites {
 		select {
 		case err := <-errorc:
 			if err != nil {
-				return err
+				errors = append(errors, err)
 			}
 		case results := <-resultc:
 			for _, result := range results {
@@ -88,6 +90,11 @@ func (c *Crawler) Crawl(sites []rpi.RPiSite) error {
 		}
 	}
 
+	if len(errors) > 0 {
+		// for now, report the first error
+		return fmt.Errorf("failed to crawl %d sites [%v]", len(errors), errors[0])
+	}
+	
 	return nil
 }
 
