@@ -3,7 +3,7 @@ package messaging
 import (
 	"log"
 
-	"github.com/ralucas/rpi-poller/messaging/message"
+	"github.com/ralucas/rpi-poller/pkg/messaging/message"
 )
 
 type MessengerManager struct {
@@ -15,6 +15,7 @@ type MessengerManager struct {
 func NewMessengerManager(recipients []string, messenger Messenger, logging *log.Logger) *MessengerManager {
 	m := &MessengerManager{
 		messenger: messenger,
+		listeners: make(map[string]int),
 	}
 
 	for _, r := range recipients {

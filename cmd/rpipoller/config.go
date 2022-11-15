@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/ralucas/rpi-poller/crawler"
-	"github.com/ralucas/rpi-poller/messaging"
+	"github.com/ralucas/rpi-poller/pkg/crawler"
+	"github.com/ralucas/rpi-poller/pkg/messaging"
 	"github.com/spf13/viper"
 )
 

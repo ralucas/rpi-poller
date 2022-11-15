@@ -3,7 +3,7 @@ package value
 import (
 	"time"
 
-	"github.com/ralucas/rpi-poller/rpi"
+	"github.com/ralucas/rpi-poller/pkg/rpi"
 )
 
 type Value struct {

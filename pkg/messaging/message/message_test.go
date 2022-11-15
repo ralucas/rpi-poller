@@ -3,7 +3,7 @@ package message_test
 import (
 	"testing"
 
-	"github.com/ralucas/rpi-poller/messaging/message"
+	"github.com/ralucas/rpi-poller/pkg/messaging/message"
 	"github.com/stretchr/testify/assert"
 )
 

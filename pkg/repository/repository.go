@@ -3,8 +3,8 @@ package repository
 import (
 	"log"
 
-	"github.com/ralucas/rpi-poller/repository/providers"
-	"github.com/ralucas/rpi-poller/rpi"
+	"github.com/ralucas/rpi-poller/pkg/repository/providers"
+	"github.com/ralucas/rpi-poller/pkg/rpi"
 )
 
 type Repository interface {

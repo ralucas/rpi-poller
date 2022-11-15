@@ -7,10 +7,9 @@ import (
 	"time"
 
 	"github.com/chromedp/chromedp"
-	"github.com/ralucas/rpi-poller/messaging"
-	"github.com/ralucas/rpi-poller/messaging/message"
-	"github.com/ralucas/rpi-poller/repository"
-	"github.com/ralucas/rpi-poller/rpi"
+	"github.com/ralucas/rpi-poller/pkg/messaging/message"
+	"github.com/ralucas/rpi-poller/pkg/repository"
+	"github.com/ralucas/rpi-poller/pkg/rpi"
 )
 
 type Config struct {
@@ -25,20 +24,29 @@ type Result struct {
 	Attributes  map[string]string
 }
 
+type Observer interface {
+	Notify(message.Message) error
+}
+
 type Crawler struct {
 	logger    *log.Logger
 	store     repository.Repository
-	messenger *messaging.MessengerManager
+	messenger Observer
 	config    Config
 }
 
-func New(mm *messaging.MessengerManager, config Config, logger *log.Logger) (*Crawler, error) {
+func New(
+	mm Observer,
+	repo repository.Repository,
+	config Config,
+	logger *log.Logger,
+) *Crawler {
 	return &Crawler{
 		logger:    logger,
-		store:     repository.New(repository.InMemory, logger),
+		store:     repo,
 		messenger: mm,
 		config:    config,
-	}, nil
+	}
 }
 
 func (c *Crawler) Crawl(sites []rpi.RPiSite) error {
@@ -50,27 +58,33 @@ func (c *Crawler) Crawl(sites []rpi.RPiSite) error {
 	}
 
 	for range sites {
-		if err := <-errorc; err != nil {
-			return err
-		}
-
-		for _, result := range <-resultc {
-			stockStatus := rpi.StringToStatus(result.Text)
-			c.store.SetStockStatus(result.Site.Name, result.ProductName, stockStatus)
-
-			if stockStatus == rpi.InStock {
-				subject := "RPi In Stock Alert"
-				msg := fmt.Sprintf("***** IN STOCK ALERT: %s - %s *****", result.Site.Name, result.ProductName)
-
-				c.logger.Printf("sending message: %s", msg)
-
-				err := c.messenger.Notify(message.New(subject, msg))
-				if err != nil {
-					c.logger.Printf("failed to send message: %+v", err)
-				}
+		select {
+		case err := <-errorc:
+			if err != nil {
+				return err
 			}
+		case results := <-resultc:
+			for _, result := range results {
+				stockStatus := rpi.StringToStatus(result.Text)
+				err := c.store.SetStockStatus(result.Site.Name, result.ProductName, stockStatus)
+				if err != nil {
+					c.logger.Printf("failed to set stock status %v", err)
+				}
 
-			c.logger.Printf("%s - %s : %s", result.Site.Name, result.ProductName, rpi.StatusToString(stockStatus))
+				if stockStatus == rpi.InStock {
+					subject := "RPi In Stock Alert"
+					msg := fmt.Sprintf("***** IN STOCK ALERT: %s - %s *****", result.Site.Name, result.ProductName)
+
+					c.logger.Printf("sending message: %s", msg)
+
+					err := c.messenger.Notify(message.New(subject, msg))
+					if err != nil {
+						c.logger.Printf("failed to send message: %+v", err)
+					}
+				}
+
+				c.logger.Printf("%s - %s : %s", result.Site.Name, result.ProductName, rpi.StatusToString(stockStatus))
+			}
 		}
 	}
 
@@ -79,9 +93,10 @@ func (c *Crawler) Crawl(sites []rpi.RPiSite) error {
 
 func (c *Crawler) crawlSite(site rpi.RPiSite, errorc chan error, resultc chan []*Result) {
 	// create context, ignore the initial cancel as one is given right next
-	ctx, _ := context.WithTimeout(context.Background(), time.Duration(c.config.TimeoutSec)*time.Second)
-	ctx, cancel := chromedp.NewContext(ctx)
-	defer cancel()
+	ctx, cancel1 := context.WithTimeout(context.Background(), time.Duration(c.config.TimeoutSec)*time.Second)
+	defer cancel1()
+	ctx, cancel2 := chromedp.NewContext(ctx)
+	defer cancel2()
 
 	// starting browser
 	if err := chromedp.Run(ctx); err != nil {

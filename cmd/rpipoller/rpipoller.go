@@ -4,20 +4,16 @@ import (
 	"log"
 	"time"
 
-	"github.com/ralucas/rpi-poller/crawler"
-	"github.com/ralucas/rpi-poller/messaging"
-	"github.com/ralucas/rpi-poller/rpi"
+	"github.com/ralucas/rpi-poller/pkg/crawler"
+	"github.com/ralucas/rpi-poller/pkg/messaging"
+	"github.com/ralucas/rpi-poller/pkg/repository"
+	"github.com/ralucas/rpi-poller/pkg/rpi"
 )
 
 func main() {
 	logger := log.Default()
 
 	logger.Println("Running rpi poller...")
-
-	sites, err := rpi.GetSites()
-	if err != nil {
-		logger.Fatalf("failed to get sites %+v", err)
-	}
 
 	conf, err := config()
 	if err != nil {
@@ -36,9 +32,13 @@ func main() {
 
 	mm := messaging.NewMessengerManager(recs, m, logger)
 
-	c, err := crawler.New(mm, conf.Crawler, logger)
+	repo := repository.New(repository.InMemory, logger)
+
+	c := crawler.New(mm, repo, conf.Crawler, logger)
+
+	sites, err := rpi.GetSites()
 	if err != nil {
-		logger.Fatalf("failed to create crawler %+v", err)
+		logger.Fatalf("failed to get sites %+v", err)
 	}
 
 	for {

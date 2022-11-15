@@ -3,3 +3,4 @@
 configs/*
 test/resources/*
 recipients.yaml
+bin/

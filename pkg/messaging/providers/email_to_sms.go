@@ -12,7 +12,7 @@ import (
 	"google.golang.org/api/gmail/v1"
 	"google.golang.org/api/option"
 
-	"github.com/ralucas/rpi-poller/messaging/message"
+	"github.com/ralucas/rpi-poller/pkg/messaging/message"
 )
 
 type EmailSender string

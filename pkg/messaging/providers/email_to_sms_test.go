@@ -6,8 +6,8 @@ import (
 	"net/smtp"
 	"testing"
 
-	"github.com/ralucas/rpi-poller/messaging/message"
-	"github.com/ralucas/rpi-poller/messaging/providers"
+	"github.com/ralucas/rpi-poller/pkg/messaging/message"
+	"github.com/ralucas/rpi-poller/pkg/messaging/providers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ralucas/rpi-poller/repository/util"
-	"github.com/ralucas/rpi-poller/repository/value"
-	"github.com/ralucas/rpi-poller/rpi"
+	"github.com/ralucas/rpi-poller/pkg/repository/util"
+	"github.com/ralucas/rpi-poller/pkg/repository/value"
+	"github.com/ralucas/rpi-poller/pkg/rpi"
 )
 
 type InMemoryStore struct {

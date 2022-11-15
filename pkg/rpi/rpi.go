@@ -21,10 +21,12 @@ type RPiSite struct {
 type RPiProduct struct {
 	Name     string `yaml:"name"`
 	Url      string `yaml:"url"`
-	Category struct {
-		Selector  string `yaml:"selector"`
-		Attribute string `yaml:"attribute"`
-	}
+	Category RPiProductCategory
+}
+
+type RPiProductCategory struct {
+	Selector  string `yaml:"selector"`
+	Attribute string `yaml:"attribute"`
 }
 
 type RPiStockStatus int
@@ -38,7 +40,7 @@ const (
 func GetSites() ([]RPiSite, error) {
 	rpi := &RPi{}
 
-	rpiYaml, err := os.ReadFile("rpi.yaml")
+	rpiYaml, err := os.ReadFile("./data/rpi.yaml")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read yaml: %v ", err)
 	}
