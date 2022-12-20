@@ -2,19 +2,28 @@ package messaging
 
 import (
 	"log"
+	"time"
 
 	"github.com/ralucas/rpi-poller/pkg/messaging/message"
+	"github.com/ralucas/rpi-poller/pkg/model"
 )
+
+type Store interface {
+	SetNotification(recipient string)
+	GetNotificationByRecipient(recipient string) (model.Notification, bool)
+}
 
 type MessengerManager struct {
 	listeners map[string]int
 	messenger Messenger
+	store     Store
 	logger    *log.Logger
 }
 
-func NewMessengerManager(recipients []string, messenger Messenger, logging *log.Logger) *MessengerManager {
+func NewMessengerManager(recipients []string, messenger Messenger, store Store, logging *log.Logger) *MessengerManager {
 	m := &MessengerManager{
 		messenger: messenger,
+		store:     store,
 		listeners: make(map[string]int),
 	}
 
@@ -39,7 +48,15 @@ func (m *MessengerManager) Notify(msg message.Message) error {
 	errorc := make(chan error)
 	for listener := range m.listeners {
 		go func(l string, ch chan error) {
-			ch <- m.messenger.Send(l, msg)
+			if val, ok := m.store.GetNotificationByRecipient(l); ok {
+				if time.Since(val.UpdatedAt).Seconds() > time.Duration.Seconds(300) {
+					m.store.SetNotification(l)
+					ch <- m.messenger.Send(l, msg)
+				}
+			} else {
+				m.store.SetNotification(l)
+				ch <- m.messenger.Send(l, msg)
+			}
 		}(listener, errorc)
 	}
 

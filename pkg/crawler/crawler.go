@@ -8,7 +8,6 @@ import (
 
 	"github.com/chromedp/chromedp"
 	"github.com/ralucas/rpi-poller/pkg/messaging/message"
-	"github.com/ralucas/rpi-poller/pkg/repository"
 	"github.com/ralucas/rpi-poller/pkg/rpi"
 )
 
@@ -24,28 +23,33 @@ type Result struct {
 	Attributes  map[string]string
 }
 
-type Observer interface {
+type Notifier interface {
 	Notify(message.Message) error
 }
 
+type Repository interface {
+	GetStockStatus(site string, productName string) (rpi.RPiStockStatus, error)
+	SetStockStatus(site string, productName string, status rpi.RPiStockStatus)
+}
+
 type Crawler struct {
-	logger    *log.Logger
-	store     repository.Repository
-	messenger Observer
-	config    Config
+	logger   *log.Logger
+	store    Repository
+	notifier Notifier
+	config   Config
 }
 
 func New(
-	mm Observer,
-	repo repository.Repository,
+	notifier Notifier,
+	repo Repository,
 	config Config,
 	logger *log.Logger,
 ) *Crawler {
 	return &Crawler{
-		logger:    logger,
-		store:     repo,
-		messenger: mm,
-		config:    config,
+		logger:   logger,
+		store:    repo,
+		notifier: notifier,
+		config:   config,
 	}
 }
 
@@ -68,10 +72,7 @@ func (c *Crawler) Crawl(sites []rpi.RPiSite) error {
 		case results := <-resultc:
 			for _, result := range results {
 				stockStatus := rpi.StringToStatus(result.Text)
-				err := c.store.SetStockStatus(result.Site.Name, result.ProductName, stockStatus)
-				if err != nil {
-					c.logger.Printf("failed to set stock status %v", err)
-				}
+				c.store.SetStockStatus(result.Site.Name, result.ProductName, stockStatus)
 
 				if stockStatus == rpi.InStock {
 					subject := "RPi In Stock Alert"
@@ -79,7 +80,7 @@ func (c *Crawler) Crawl(sites []rpi.RPiSite) error {
 
 					c.logger.Printf("sending message: %s", msg)
 
-					err := c.messenger.Notify(message.New(subject, msg))
+					err := c.notifier.Notify(message.New(subject, msg))
 					if err != nil {
 						c.logger.Printf("failed to send message: %+v", err)
 					}
@@ -94,7 +95,7 @@ func (c *Crawler) Crawl(sites []rpi.RPiSite) error {
 		// for now, report the first error
 		return fmt.Errorf("failed to crawl %d sites [%v]", len(errors), errors[0])
 	}
-	
+
 	return nil
 }
 

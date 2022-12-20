@@ -30,8 +30,6 @@ func (m *MockRepository) GetStockStatus(site string, productName string) (rpi.RP
 	return args.Get(0).(rpi.RPiStockStatus), args.Error(1)
 }
 
-func (m *MockRepository) SetStockStatus(site string, productName string, status rpi.RPiStockStatus) error {
-	args := m.Called(site, productName, status)
-
-	return args.Error(0)
+func (m *MockRepository) SetStockStatus(site string, productName string, status rpi.RPiStockStatus) {
+	m.Called(site, productName, status)
 }

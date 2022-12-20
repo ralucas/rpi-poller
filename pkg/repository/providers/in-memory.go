@@ -6,30 +6,32 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ralucas/rpi-poller/pkg/repository/util"
-	"github.com/ralucas/rpi-poller/pkg/repository/value"
+	"github.com/ralucas/rpi-poller/pkg/model"
+	"github.com/ralucas/rpi-poller/pkg/repository"
 	"github.com/ralucas/rpi-poller/pkg/rpi"
 )
 
 type InMemoryStore struct {
 	logger *log.Logger
-	store  map[string]value.Value
+	store  map[string]model.StockStatus
+	notifications map[string]model.Notification
 	mu     sync.Mutex
 }
 
 func NewInMemoryStore(l *log.Logger) *InMemoryStore {
 	return &InMemoryStore{
 		logger: l,
-		store:  make(map[string]value.Value),
+		store:  make(map[string]model.StockStatus),
+		notifications: make(map[string]model.Notification),
 	}
 }
 
-func (s *InMemoryStore) List() map[string]value.Value {
+func (s *InMemoryStore) List() map[string]model.StockStatus {
 	return s.store
 }
 
 func (s *InMemoryStore) GetStockStatus(site string, productName string) (rpi.RPiStockStatus, error) {
-	id := util.BuildID(site, productName)
+	id := repository.BuildID(site, productName)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -41,13 +43,23 @@ func (s *InMemoryStore) GetStockStatus(site string, productName string) (rpi.RPi
 	return -1, fmt.Errorf("item not found [%s %s]", site, productName)
 }
 
-func (s *InMemoryStore) SetStockStatus(site string, productName string, status rpi.RPiStockStatus) error {
-	id := util.BuildID(site, productName)
+func (s *InMemoryStore) SetStockStatus(site string, productName string, status rpi.RPiStockStatus) {
+	id := repository.BuildID(site, productName)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.store[id] = value.Value{Status: status, UpdatedAt: time.Now()}
+	s.store[id] = model.StockStatus{Status: status, UpdatedAt: time.Now()}
+}
 
-	return nil
+func (s *InMemoryStore) SetNotification(recipient string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.notifications[recipient] = model.Notification{UpdatedAt: time.Now()}
+}
+
+func (s *InMemoryStore) GetNotificationByRecipient(recipient string) (notification model.Notification, exists bool) {
+	val, exists := s.notifications[recipient]
+	return val, exists
 }

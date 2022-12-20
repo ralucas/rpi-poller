@@ -33,7 +33,7 @@ func TestCrawl(t *testing.T) {
 	mmm.On("Notify", mock.Anything).Return(nil)
 
 	mr := new(mocks.MockRepository)
-	mr.On("SetStockStatus", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mr.On("SetStockStatus", mock.Anything, mock.Anything, mock.Anything)
 	mr.On("GetStockStatus").Return(0, nil)
 
 	c := crawler.New(

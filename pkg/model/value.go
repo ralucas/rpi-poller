@@ -1,4 +1,4 @@
-package value
+package model
 
 import (
 	"time"
@@ -6,7 +6,7 @@ import (
 	"github.com/ralucas/rpi-poller/pkg/rpi"
 )
 
-type Value struct {
+type StockStatus struct {
 	Status    rpi.RPiStockStatus
 	UpdatedAt time.Time
 }

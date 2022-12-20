@@ -6,7 +6,7 @@ import (
 
 	"github.com/ralucas/rpi-poller/pkg/crawler"
 	"github.com/ralucas/rpi-poller/pkg/messaging"
-	"github.com/ralucas/rpi-poller/pkg/repository"
+	"github.com/ralucas/rpi-poller/pkg/repository/providers"
 	"github.com/ralucas/rpi-poller/pkg/rpi"
 )
 
@@ -30,9 +30,9 @@ func main() {
 		logger.Fatalf("failed to get recipients %v", err)
 	}
 
-	mm := messaging.NewMessengerManager(recs, m, logger)
+	repo := providers.NewInMemoryStore(logger)
 
-	repo := repository.New(repository.InMemory, logger)
+	mm := messaging.NewMessengerManager(recs, m, repo, logger)
 
 	c := crawler.New(mm, repo, conf.Crawler, logger)
 
