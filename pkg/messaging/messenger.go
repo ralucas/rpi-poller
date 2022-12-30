@@ -5,7 +5,8 @@ import (
 	"log"
 
 	"github.com/ralucas/rpi-poller/pkg/messaging/message"
-	"github.com/ralucas/rpi-poller/pkg/messaging/providers"
+	"github.com/ralucas/rpi-poller/pkg/messaging/providers/emailtosms"
+	"github.com/ralucas/rpi-poller/pkg/messaging/providers/sms"
 )
 
 type Messenger interface {
@@ -20,15 +21,16 @@ const (
 )
 
 type Config struct {
-	EmailToSMS providers.EmailToSMSConfig
+	EmailToSMS emailtosms.Config
+	SMS        sms.Config
 }
 
 func NewMessenger(provider Provider, config Config, logger *log.Logger) (Messenger, error) {
 	switch provider {
 	case SMS:
-		return providers.NewSMS(logger), nil
+		return sms.New(config.SMS, logger), nil
 	case EmailToSMS:
-		return providers.NewEmailToSMS(config.EmailToSMS, logger)
+		return emailtosms.New(config.EmailToSMS, logger)
 	}
 
 	return nil, fmt.Errorf("no such provider: %s", provider)

@@ -1,4 +1,4 @@
-package providers_test
+package emailtosms_test
 
 import (
 	"fmt"
@@ -7,36 +7,36 @@ import (
 	"testing"
 
 	"github.com/ralucas/rpi-poller/pkg/messaging/message"
-	"github.com/ralucas/rpi-poller/pkg/messaging/providers"
+	"github.com/ralucas/rpi-poller/pkg/messaging/providers/emailtosms"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-var smtpConfig = providers.EmailToSMSConfig{
+var smtpConfig = emailtosms.Config{
 	Hostname: "test-hostname",
 	Port:     "test-port",
 	Username: "test-port",
 	Password: "test-pass",
-	Sender:   providers.SMTP,
+	Sender:   emailtosms.SMTP,
 }
 
 func TestEmailToSMS_New(t *testing.T) {
-	e, err := providers.NewEmailToSMS(smtpConfig, log.Default())
+	e, err := emailtosms.New(smtpConfig, log.Default())
 	require.NoError(t, err)
 
-	assert.IsType(t, &providers.EmailToSMS{}, e)
+	assert.IsType(t, &emailtosms.EmailToSMS{}, e)
 }
 
 func TestEmailToSMS_Send(t *testing.T) {
 	testRec := "test-rec"
 	testAddr := fmt.Sprintf("%s:%s", smtpConfig.Hostname, smtpConfig.Port)
-	opt := providers.WithSMTPSendMailFunc(func(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
+	opt := emailtosms.WithSMTPSendMailFunc(func(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
 		assert.Equal(t, testAddr, addr)
 		assert.Equal(t, testRec, to[0])
 		return nil
 	})
 
-	e, err := providers.NewEmailToSMS(smtpConfig, log.Default(), opt)
+	e, err := emailtosms.New(smtpConfig, log.Default(), opt)
 	require.NoError(t, err)
 
 	err = e.Send(testRec, message.New("test-subject", "test-msg"))

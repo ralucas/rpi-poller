@@ -1,4 +1,4 @@
-package providers
+package emailtosms
 
 import (
 	"bytes"
@@ -35,7 +35,7 @@ type EmailToSMS struct {
 	password            string
 }
 
-type EmailToSMSConfig struct {
+type Config struct {
 	Sender              EmailSender
 	CredentialsFilePath string
 	Hostname            string
@@ -54,7 +54,7 @@ func WithSMTPSendMailFunc(s SMTPSendMail) EmailToSMSOption {
 	}
 }
 
-func NewEmailToSMS(config EmailToSMSConfig, logger *log.Logger, options ...EmailToSMSOption) (*EmailToSMS, error) {
+func New(config Config, logger *log.Logger, options ...EmailToSMSOption) (*EmailToSMS, error) {
 	var e *EmailToSMS
 
 	switch config.Sender {

@@ -4,3 +4,5 @@ configs/*
 test/resources/*
 recipients.yaml
 bin/
+profile.out
+*.test
