@@ -6,12 +6,13 @@ import (
 	"github.com/ralucas/rpi-poller/internal/logging"
 	"github.com/ralucas/rpi-poller/pkg/crawler"
 	"github.com/ralucas/rpi-poller/pkg/messaging"
-	"github.com/ralucas/rpi-poller/pkg/repository/providers"
+	"github.com/ralucas/rpi-poller/pkg/repository/providers/inmemory"
 	"github.com/ralucas/rpi-poller/pkg/rpi"
+	"go.uber.org/zap/zapcore"
 )
 
 func main() {
-	logger := logging.NewLogger()
+	logger := logging.NewLogger(logging.LoggerConfig{Output: logging.FileOutput, Level: zapcore.InfoLevel})
 
 	logger.Info("Running rpi poller...")
 
@@ -30,7 +31,7 @@ func main() {
 		logger.Fatalf("failed to get recipients %v", err)
 	}
 
-	repo := providers.NewInMemoryStore(logger)
+	repo := inmemory.New(logger)
 
 	mm := messaging.NewMessengerManager(recs, m, repo, logger)
 

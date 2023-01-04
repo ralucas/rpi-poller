@@ -8,4 +8,8 @@ build:
 
 .PHONY: test
 test:
-	go test -v -cover -failfast -benchmem -bench=. ./...
+	go test --tags=unit -v -cover -failfast -benchmem -bench=. ./...
+
+.PHONY: test-integration
+test-integration:
+	go test --tags=integration -v -cover -failfast -benchmem -bench=. ./...

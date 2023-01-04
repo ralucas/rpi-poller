@@ -1,8 +1,8 @@
 package rpi
 
 import (
+	_ "embed"
 	"fmt"
-	"os"
 	"strings"
 
 	"gopkg.in/yaml.v2"
@@ -19,9 +19,11 @@ type RPiSite struct {
 }
 
 type RPiProduct struct {
-	Name     string `yaml:"name"`
-	Url      string `yaml:"url"`
-	Category RPiProductCategory
+	Name      string `yaml:"name"`
+	Url       string `yaml:"url"`
+	Selector  string `yaml:"selector"`
+	Attribute string `yaml:"attribute"`
+	Category  RPiProductCategory
 }
 
 type RPiProductCategory struct {
@@ -37,15 +39,13 @@ const (
 	Unknown
 )
 
+//go:embed rpi.yaml
+var rpiYaml []byte
+
 func GetSites() ([]RPiSite, error) {
 	rpi := &RPi{}
 
-	rpiYaml, err := os.ReadFile("./data/rpi.yaml")
-	if err != nil {
-		return nil, fmt.Errorf("failed to read yaml: %v ", err)
-	}
-
-	err = yaml.Unmarshal(rpiYaml, rpi)
+	err := yaml.Unmarshal(rpiYaml, rpi)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal yaml: %v", err)
 	}

@@ -4,16 +4,22 @@ sites:
     products:
       - name: zero2
         url: 'https://www.sparkfun.com/products/18713'
+        selector: '[itemprop="availability"]'
+        attribute: 'href'
         category: 
           selector: '[data-id="product-18713"] > .main [data-toggle="notify"]'
           attribute: 'title'
       - name: 4-model-b-2gb
         url: 'https://www.sparkfun.com/products/15446'
+        selector: '[itemprop="availability"]'
+        attribute: 'href'
         category: 
           selector: '[data-id="product-15446"] > .main [data-toggle="notify"]'
           attribute: 'title'
       - name: 4-model-b-4gb
         url: 'https://www.sparkfun.com/products/15447'
+        selector: '[itemprop="availability"]'
+        attribute: 'href'
         category: 
           selector: '[data-id="product-15447"] > .main [data-toggle="notify"]'
           attribute: 'title'
@@ -23,21 +29,25 @@ sites:
     products:
       - name: zero2
         url: 'https://www.adafruit.com/product/5291'
+        selector: '[itemprop="availability"]'
         category: 
           selector: '#productListing div:nth-child(44) div.stock meta'
           attribute: 'content'
       - name: 4-model-b-1gb
         url: 'https://www.adafruit.com/product/4295'
+        selector: '[itemprop="availability"]'
         category: 
           selector: '#productListing div:nth-child(50) div.stock meta'
           attribute: 'content'
       - name: 4-model-b-2gb
         url: 'https://www.adafruit.com/product/4292'
+        selector: '[itemprop="availability"]'
         category: 
           selector: '#productListing div:nth-child(50) div.stock meta'
           attribute: 'content'
       - name: 4-model-b-4gb
         url: 'https://www.adafruit.com/product/4296'
+        selector: '[itemprop="availability"]'
         category: 
           selector: '#productListing div:nth-child(50) div.stock meta'
           attribute: 'content'

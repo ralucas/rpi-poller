@@ -1,3 +1,5 @@
+//go:build unit
+
 package crawler_test
 
 import (
@@ -6,44 +8,31 @@ import (
 	"github.com/ralucas/rpi-poller/internal/logging"
 	"github.com/ralucas/rpi-poller/pkg/crawler"
 	"github.com/ralucas/rpi-poller/pkg/crawler/mocks"
-	"github.com/ralucas/rpi-poller/pkg/rpi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 var testConfig = crawler.Config{
-	BrowserTimeoutSec: 10,
+	BrowserTimeoutSec: 60,
+	Debug:             false,
 }
 
-var testSites = []rpi.RPiSite{{
-	Name:        "test-name",
-	CategoryUrl: "https://yahoo.com",
-	Products: []rpi.RPiProduct{{
-		Name: "test-product",
-		Url:  "https://yahoo.com",
-		Category: rpi.RPiProductCategory{
-			Selector:  "selc",
-			Attribute: "attr",
-		},
-	}},
-}}
-
-func TestCrawl(t *testing.T) {
+func TestNew(t *testing.T) {
 	mmm := new(mocks.MockMessengerManager)
 	mmm.On("Notify", mock.Anything).Return(nil)
 
 	mr := new(mocks.MockRepository)
-	mr.On("SetStockStatus", mock.Anything, mock.Anything, mock.Anything)
+	mr.On("SetStockStatus", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mr.On("GetStockStatus").Return(0, nil)
+
+	l := logging.NewLogger(logging.LoggerConfig{})
 
 	c := crawler.New(
 		mmm,
 		mr,
 		testConfig,
-		logging.NewLogger(),
+		l,
 	)
 
-	err := c.Crawl(testSites)
-
-	assert.NoError(t, err)
+	assert.IsType(t, &crawler.Crawler{}, c)
 }

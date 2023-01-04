@@ -1,4 +1,4 @@
-package providers
+package inmemory
 
 import (
 	"fmt"
@@ -12,16 +12,16 @@ import (
 )
 
 type InMemoryStore struct {
-	logger logging.Logger
-	store  map[string]model.StockStatus
+	logger        logging.Logger
+	store         map[string]model.StockStatus
 	notifications map[string]model.Notification
-	mu     sync.Mutex
+	mu            sync.Mutex
 }
 
-func NewInMemoryStore(l logging.Logger) *InMemoryStore {
+func New(l logging.Logger) *InMemoryStore {
 	return &InMemoryStore{
-		logger: l,
-		store:  make(map[string]model.StockStatus),
+		logger:        l,
+		store:         make(map[string]model.StockStatus),
 		notifications: make(map[string]model.Notification),
 	}
 }
@@ -31,7 +31,10 @@ func (s *InMemoryStore) List() map[string]model.StockStatus {
 }
 
 func (s *InMemoryStore) GetStockStatus(site string, productName string) (rpi.RPiStockStatus, error) {
-	id := repository.BuildID(site, productName)
+	id, err := repository.BuildID(site, productName)
+	if err != nil {
+		return -1, err
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -43,13 +46,18 @@ func (s *InMemoryStore) GetStockStatus(site string, productName string) (rpi.RPi
 	return -1, fmt.Errorf("item not found [%s %s]", site, productName)
 }
 
-func (s *InMemoryStore) SetStockStatus(site string, productName string, status rpi.RPiStockStatus) {
-	id := repository.BuildID(site, productName)
+func (s *InMemoryStore) SetStockStatus(site string, productName string, status rpi.RPiStockStatus) error {
+	id, err := repository.BuildID(site, productName)
+	if err != nil {
+		return err
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.store[id] = model.StockStatus{Status: status, UpdatedAt: time.Now()}
+
+	return nil
 }
 
 func (s *InMemoryStore) SetNotification(recipient string) {

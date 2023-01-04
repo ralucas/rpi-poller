@@ -13,6 +13,7 @@ import (
 
 type Config struct {
 	BrowserTimeoutSec int
+	Debug             bool
 }
 
 type Result struct {
@@ -29,7 +30,7 @@ type Notifier interface {
 
 type Repository interface {
 	GetStockStatus(site string, productName string) (rpi.RPiStockStatus, error)
-	SetStockStatus(site string, productName string, status rpi.RPiStockStatus)
+	SetStockStatus(site string, productName string, status rpi.RPiStockStatus) error
 }
 
 type Crawler struct {
@@ -55,109 +56,120 @@ func New(
 
 func (c *Crawler) Crawl(sites []rpi.RPiSite) error {
 	errorc := make(chan error)
-	resultc := make(chan []*Result)
+	resultc := make(chan *Result)
+
+	n := 0
 
 	for _, site := range sites {
 		go c.crawlSite(site, errorc, resultc)
+		n += len(site.Products)
 	}
 
 	var errors []error
 
-	for range sites {
+	for i := 0; i < n; i++ {
 		select {
 		case err := <-errorc:
 			if err != nil {
 				errors = append(errors, err)
+				c.logger.Errorf(err.Error())
 			}
-		case results := <-resultc:
-			for _, result := range results {
-				stockStatus := rpi.StringToStatus(result.Text)
-				c.store.SetStockStatus(result.Site.Name, result.ProductName, stockStatus)
+		case result := <-resultc:
+			stockStatus := rpi.StringToStatus(result.Text)
 
-				if stockStatus == rpi.InStock {
-					subject := "RPi In Stock Alert"
-					msg := fmt.Sprintf("***** IN STOCK ALERT: %s - %s *****", result.Site.Name, result.ProductName)
+			err := c.store.SetStockStatus(result.Site.Name, result.ProductName, stockStatus)
+			if err != nil {
+				errors = append(errors, err)
+				c.logger.Errorf(err.Error())
+				continue
+			}
 
-					c.logger.Infof("sending message: %s", msg)
+			if stockStatus == rpi.InStock {
+				subject := "RPi In Stock Alert"
+				msg := fmt.Sprintf("***** IN STOCK ALERT: %s - %s *****", result.Site.Name, result.ProductName)
 
-					err := c.notifier.Notify(message.New(subject, msg))
-					if err != nil {
-						c.logger.Errorf("failed to send message: %+v", err)
-					}
+				c.logger.Infof("sending message: %s", msg)
+
+				err := c.notifier.Notify(message.New(subject, msg))
+				if err != nil {
+					c.logger.Infof("failed to send message: %+v", err)
 				}
-
-				c.logger.Infof("%s - %s : %s", result.Site.Name, result.ProductName, rpi.StatusToString(stockStatus))
 			}
+
+			c.logger.Infof("%s - %s : %s [%s]", result.Site.Name, result.ProductName, rpi.StatusToString(stockStatus), result.Text)
 		}
 	}
 
 	if len(errors) > 0 {
 		// for now, report the first error
-		return fmt.Errorf("failed to crawl %d sites [%v]", len(errors), errors[0])
+		return fmt.Errorf("failed to crawl %d products [%v]", len(errors), errors[0])
 	}
 
 	return nil
 }
 
-func (c *Crawler) crawlSite(site rpi.RPiSite, errorc chan error, resultc chan []*Result) {
+func (c *Crawler) crawlSite(site rpi.RPiSite, errorc chan error, resultc chan *Result) {
+	var ctx context.Context
+
 	// create context, ignore the initial cancel as one is given right next
-	ctx, cancel1 := context.WithTimeout(context.Background(), time.Duration(c.config.BrowserTimeoutSec)*time.Second)
-	defer cancel1()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.config.BrowserTimeoutSec)*time.Second)
+	defer cancel()
+
+	if c.config.Debug {
+		var cancel1 context.CancelFunc
+		ctx, cancel1 = chromedp.NewExecAllocator(ctx, append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("headless", false))...)
+		defer cancel1()
+	}
+
 	ctx, cancel2 := chromedp.NewContext(ctx)
 	defer cancel2()
 
-	// starting browser
-	if err := chromedp.Run(ctx); err != nil {
-		c.logger.Fatalf("failed starting browser %v\n", err)
-		errorc <- err
-		return
+	for _, product := range site.Products {
+		// starting tab
+		if err := chromedp.Run(ctx); err != nil {
+			c.logger.Fatalf("failed starting browser %v\n", err)
+			errorc <- err
+			return
+		}
+		// Results are attached to the selectors and bound as pointers
+		// so they get passed back here as pointers to be populated
+		// by the `Run` process later and returned via a channel.
+		result := &Result{Site: site, ProductName: product.Name}
+		actions, result := c.createActions(product, result)
+
+		c.logger.Infof("navigating to %s\n", product.Url)
+
+		if err := chromedp.Run(ctx, actions...); err != nil {
+			errorc <- fmt.Errorf("failed crawling %s for %s: %+v", product.Url, product.Name, err)
+			return
+		}
+
+		var cancel3 context.CancelFunc
+		ctx, cancel3 = chromedp.NewContext(ctx)
+		defer cancel3()
+
+		resultc <- result
 	}
-
-	actions := []chromedp.Action{chromedp.Navigate(site.CategoryUrl)}
-
-	// Results are attached to the selectors and bound as pointers
-	// so they get passed back here as pointers to be populated
-	// by the `Run` process later and returned via a channel.
-	selActions, results := c.selectors(site.Products)
-
-	actions = append(actions, selActions...)
-
-	c.logger.Infof("navigating to %s\n", site.CategoryUrl)
-
-	if err := chromedp.Run(ctx, actions...); err != nil {
-		errorc <- fmt.Errorf("failed crawling %s: %+v", site.CategoryUrl, err)
-		return
-	}
-
-	resultc <- results
 }
 
-func (c *Crawler) selectors(products []rpi.RPiProduct) ([]chromedp.Action, []*Result) {
-	var actions []chromedp.Action
-	var results []*Result
+func (c *Crawler) createActions(product rpi.RPiProduct, result *Result) ([]chromedp.Action, *Result) {
+	actions := []chromedp.Action{chromedp.Navigate(product.Url)}
 
-	for _, product := range products {
-		if product.Category.Attribute != "" {
-			result := &Result{ProductName: product.Name}
-			results = append(results, result)
-			action := chromedp.AttributeValue(
-				product.Category.Selector,
-				product.Category.Attribute,
-				&result.Text,
-				&result.Ok,
-			)
-			actions = append(actions, action)
-		} else {
-			result := &Result{ProductName: product.Name}
-			results = append(results, result)
-			action := chromedp.Text(
-				product.Category.Selector,
-				&result.Text,
-			)
-			actions = append(actions, action)
-
-		}
+	if product.Attribute != "" {
+		action := chromedp.AttributeValue(
+			product.Selector,
+			product.Attribute,
+			&result.Text,
+			&result.Ok,
+		)
+		actions = append(actions, action)
+	} else {
+		action := chromedp.Text(
+			product.Selector,
+			&result.Text,
+		)
+		actions = append(actions, action)
 	}
 
-	return actions, results
+	return actions, result
 }
