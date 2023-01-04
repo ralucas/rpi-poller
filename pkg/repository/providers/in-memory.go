@@ -2,23 +2,23 @@ package providers
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
+	"github.com/ralucas/rpi-poller/internal/logging"
 	"github.com/ralucas/rpi-poller/pkg/model"
 	"github.com/ralucas/rpi-poller/pkg/repository"
 	"github.com/ralucas/rpi-poller/pkg/rpi"
 )
 
 type InMemoryStore struct {
-	logger *log.Logger
+	logger logging.Logger
 	store  map[string]model.StockStatus
 	notifications map[string]model.Notification
 	mu     sync.Mutex
 }
 
-func NewInMemoryStore(l *log.Logger) *InMemoryStore {
+func NewInMemoryStore(l logging.Logger) *InMemoryStore {
 	return &InMemoryStore{
 		logger: l,
 		store:  make(map[string]model.StockStatus),

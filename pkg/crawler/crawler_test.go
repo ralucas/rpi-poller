@@ -1,9 +1,9 @@
 package crawler_test
 
 import (
-	"log"
 	"testing"
 
+	"github.com/ralucas/rpi-poller/internal/logging"
 	"github.com/ralucas/rpi-poller/pkg/crawler"
 	"github.com/ralucas/rpi-poller/pkg/crawler/mocks"
 	"github.com/ralucas/rpi-poller/pkg/rpi"
@@ -12,7 +12,7 @@ import (
 )
 
 var testConfig = crawler.Config{
-	TimeoutSec: 10,
+	BrowserTimeoutSec: 10,
 }
 
 var testSites = []rpi.RPiSite{{
@@ -40,7 +40,7 @@ func TestCrawl(t *testing.T) {
 		mmm,
 		mr,
 		testConfig,
-		log.Default(),
+		logging.NewLogger(),
 	)
 
 	err := c.Crawl(testSites)
