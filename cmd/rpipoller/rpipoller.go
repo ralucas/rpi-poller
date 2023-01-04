@@ -1,9 +1,9 @@
 package main
 
 import (
-	"log"
 	"time"
 
+	"github.com/ralucas/rpi-poller/internal/logging"
 	"github.com/ralucas/rpi-poller/pkg/crawler"
 	"github.com/ralucas/rpi-poller/pkg/messaging"
 	"github.com/ralucas/rpi-poller/pkg/repository/providers"
@@ -11,9 +11,9 @@ import (
 )
 
 func main() {
-	logger := log.Default()
+	logger := logging.NewLogger()
 
-	logger.Println("Running rpi poller...")
+	logger.Info("Running rpi poller...")
 
 	conf, err := config()
 	if err != nil {
@@ -43,7 +43,7 @@ func main() {
 
 	for {
 		if err := c.Crawl(sites); err != nil {
-			logger.Printf("error crawling %+v", err)
+			logger.Errorf("error crawling %+v", err)
 		}
 
 		time.Sleep(time.Duration(conf.PollTimeoutSec) * time.Second)

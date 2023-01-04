@@ -1,9 +1,9 @@
 package messaging
 
 import (
-	"log"
 	"time"
 
+	"github.com/ralucas/rpi-poller/internal/logging"
 	"github.com/ralucas/rpi-poller/pkg/messaging/message"
 	"github.com/ralucas/rpi-poller/pkg/model"
 )
@@ -17,10 +17,10 @@ type MessengerManager struct {
 	listeners map[string]int
 	messenger Messenger
 	store     Store
-	logger    *log.Logger
+	logger    logging.Logger
 }
 
-func NewMessengerManager(recipients []string, messenger Messenger, store Store, logging *log.Logger) *MessengerManager {
+func NewMessengerManager(recipients []string, messenger Messenger, store Store, logging logging.Logger) *MessengerManager {
 	m := &MessengerManager{
 		messenger: messenger,
 		store:     store,
@@ -62,7 +62,7 @@ func (m *MessengerManager) Notify(msg message.Message) error {
 
 	// todo: how to handle errors?
 	for err := range errorc {
-		m.logger.Printf("failed sending %v", err)
+		m.logger.Infof("failed sending %v", err)
 	}
 
 	return nil

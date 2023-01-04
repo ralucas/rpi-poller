@@ -3,16 +3,16 @@ package crawler
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/chromedp/chromedp"
+	"github.com/ralucas/rpi-poller/internal/logging"
 	"github.com/ralucas/rpi-poller/pkg/messaging/message"
 	"github.com/ralucas/rpi-poller/pkg/rpi"
 )
 
 type Config struct {
-	TimeoutSec int
+	BrowserTimeoutSec int
 }
 
 type Result struct {
@@ -33,7 +33,7 @@ type Repository interface {
 }
 
 type Crawler struct {
-	logger   *log.Logger
+	logger   logging.Logger
 	store    Repository
 	notifier Notifier
 	config   Config
@@ -43,7 +43,7 @@ func New(
 	notifier Notifier,
 	repo Repository,
 	config Config,
-	logger *log.Logger,
+	logger logging.Logger,
 ) *Crawler {
 	return &Crawler{
 		logger:   logger,
@@ -78,15 +78,15 @@ func (c *Crawler) Crawl(sites []rpi.RPiSite) error {
 					subject := "RPi In Stock Alert"
 					msg := fmt.Sprintf("***** IN STOCK ALERT: %s - %s *****", result.Site.Name, result.ProductName)
 
-					c.logger.Printf("sending message: %s", msg)
+					c.logger.Infof("sending message: %s", msg)
 
 					err := c.notifier.Notify(message.New(subject, msg))
 					if err != nil {
-						c.logger.Printf("failed to send message: %+v", err)
+						c.logger.Infof("failed to send message: %+v", err)
 					}
 				}
 
-				c.logger.Printf("%s - %s : %s", result.Site.Name, result.ProductName, rpi.StatusToString(stockStatus))
+				c.logger.Debugf("%s - %s : %s", result.Site.Name, result.ProductName, rpi.StatusToString(stockStatus))
 			}
 		}
 	}
@@ -101,7 +101,7 @@ func (c *Crawler) Crawl(sites []rpi.RPiSite) error {
 
 func (c *Crawler) crawlSite(site rpi.RPiSite, errorc chan error, resultc chan []*Result) {
 	// create context, ignore the initial cancel as one is given right next
-	ctx, cancel1 := context.WithTimeout(context.Background(), time.Duration(c.config.TimeoutSec)*time.Second)
+	ctx, cancel1 := context.WithTimeout(context.Background(), time.Duration(c.config.BrowserTimeoutSec)*time.Second)
 	defer cancel1()
 	ctx, cancel2 := chromedp.NewContext(ctx)
 	defer cancel2()
@@ -122,7 +122,7 @@ func (c *Crawler) crawlSite(site rpi.RPiSite, errorc chan error, resultc chan []
 
 	actions = append(actions, selActions...)
 
-	c.logger.Printf("navigating to %s\n", site.CategoryUrl)
+	c.logger.Debugf("navigating to %s\n", site.CategoryUrl)
 
 	if err := chromedp.Run(ctx, actions...); err != nil {
 		errorc <- fmt.Errorf("failed crawling %s: %+v", site.CategoryUrl, err)

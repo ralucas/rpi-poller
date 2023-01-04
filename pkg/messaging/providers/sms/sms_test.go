@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"testing"
 
+	"github.com/ralucas/rpi-poller/internal/logging"
 	"github.com/ralucas/rpi-poller/pkg/messaging/message"
 	"github.com/ralucas/rpi-poller/pkg/messaging/providers/sms"
 	"github.com/stretchr/testify/assert"
@@ -52,7 +52,7 @@ func TestSend(t *testing.T) {
 		&http.Response{StatusCode: http.StatusOK}, nil,
 	)
 
-	s := sms.New(conf, log.Default(), sms.WithHTTPClient(mockClient))
+	s := sms.New(conf, logging.NewLogger(), sms.WithHTTPClient(mockClient))
 
 	err = s.Send(testrec, testmsg)
 

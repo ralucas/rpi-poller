@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 
+	"github.com/ralucas/rpi-poller/internal/logging"
 	"github.com/ralucas/rpi-poller/pkg/messaging/message"
 )
 
@@ -16,7 +16,7 @@ const (
 )
 
 type SMS struct {
-	logger *log.Logger
+	logger logging.Logger
 	config Config
 	client HttpClient
 }
@@ -37,7 +37,7 @@ func WithHTTPClient(client HttpClient) SMSOption {
 	}
 }
 
-func New(config Config, logger *log.Logger, opts ...SMSOption) *SMS {
+func New(config Config, logger logging.Logger, opts ...SMSOption) *SMS {
 	sms := &SMS{logger: logger, config: config, client: http.DefaultClient}
 
 	for _, opt := range opts {

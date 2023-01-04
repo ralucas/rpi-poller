@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log"
 	"net/smtp"
 	"os"
 
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/gmail/v1"
 	"google.golang.org/api/option"
+	"github.com/ralucas/rpi-poller/internal/logging"
 
 	"github.com/ralucas/rpi-poller/pkg/messaging/message"
 )
@@ -25,7 +25,7 @@ const (
 
 type EmailToSMS struct {
 	service             *gmail.UsersMessagesService
-	logger              *log.Logger
+	logger              logging.Logger
 	emailSender         EmailSender
 	smtpSendMail        SMTPSendMail
 	credentialsFilePath string
@@ -54,7 +54,7 @@ func WithSMTPSendMailFunc(s SMTPSendMail) EmailToSMSOption {
 	}
 }
 
-func New(config Config, logger *log.Logger, options ...EmailToSMSOption) (*EmailToSMS, error) {
+func New(config Config, logger logging.Logger, options ...EmailToSMSOption) (*EmailToSMS, error) {
 	var e *EmailToSMS
 
 	switch config.Sender {
@@ -135,7 +135,7 @@ func (e *EmailToSMS) sendWithGmailOAuth2(recipient string, msg message.Message) 
 		return fmt.Errorf("failed in sending the message: %v", err)
 	}
 
-	e.logger.Printf("sent message [%d]", sentMsg.ServerResponse.HTTPStatusCode)
+	e.logger.Infof("sent message [%d]", sentMsg.ServerResponse.HTTPStatusCode)
 
 	return nil
 }

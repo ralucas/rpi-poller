@@ -2,8 +2,8 @@ package messaging
 
 import (
 	"fmt"
-	"log"
 
+	"github.com/ralucas/rpi-poller/internal/logging"
 	"github.com/ralucas/rpi-poller/pkg/messaging/message"
 	"github.com/ralucas/rpi-poller/pkg/messaging/providers/emailtosms"
 	"github.com/ralucas/rpi-poller/pkg/messaging/providers/sms"
@@ -25,7 +25,7 @@ type Config struct {
 	SMS        sms.Config
 }
 
-func NewMessenger(provider Provider, config Config, logger *log.Logger) (Messenger, error) {
+func NewMessenger(provider Provider, config Config, logger logging.Logger) (Messenger, error) {
 	switch provider {
 	case SMS:
 		return sms.New(config.SMS, logger), nil

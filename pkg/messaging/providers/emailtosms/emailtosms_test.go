@@ -2,9 +2,9 @@ package emailtosms_test
 
 import (
 	"fmt"
-	"log"
 	"net/smtp"
 	"testing"
+	"github.com/ralucas/rpi-poller/internal/logging"
 
 	"github.com/ralucas/rpi-poller/pkg/messaging/message"
 	"github.com/ralucas/rpi-poller/pkg/messaging/providers/emailtosms"
@@ -21,7 +21,7 @@ var smtpConfig = emailtosms.Config{
 }
 
 func TestEmailToSMS_New(t *testing.T) {
-	e, err := emailtosms.New(smtpConfig, log.Default())
+	e, err := emailtosms.New(smtpConfig, logging.NewLogger())
 	require.NoError(t, err)
 
 	assert.IsType(t, &emailtosms.EmailToSMS{}, e)
@@ -36,7 +36,7 @@ func TestEmailToSMS_Send(t *testing.T) {
 		return nil
 	})
 
-	e, err := emailtosms.New(smtpConfig, log.Default(), opt)
+	e, err := emailtosms.New(smtpConfig, logging.NewLogger(), opt)
 	require.NoError(t, err)
 
 	err = e.Send(testRec, message.New("test-subject", "test-msg"))
