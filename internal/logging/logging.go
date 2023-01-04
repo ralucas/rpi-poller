@@ -1,6 +1,8 @@
 package logging
 
 import (
+	"os"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -15,13 +17,29 @@ type Logger interface {
 	Infof(string, ...interface{})
 }
 
-func NewLogger() *zap.SugaredLogger {
-	w := zapcore.AddSync(&lumberjack.Logger{
-		Filename:   "/var/log/rpipoller/rpipoller.log",
-		MaxSize:    500, // megabytes
-		MaxBackups: 3,
-		MaxAge:     28, // days
-	})
+type LoggerOutput string
+
+const (
+	FileOutput   LoggerOutput = "file"
+	StdoutOutput LoggerOutput = "stdout"
+)
+
+type LoggerConfig struct {
+	Output LoggerOutput
+	Level  zapcore.Level
+}
+
+func NewLogger(conf LoggerConfig) *zap.SugaredLogger {
+	w := zapcore.AddSync(os.Stdout)
+
+	if conf.Output == FileOutput {
+		w = zapcore.AddSync(&lumberjack.Logger{
+			Filename:   "/var/log/rpipoller/rpipoller.log",
+			MaxSize:    500, // megabytes
+			MaxBackups: 3,
+			MaxAge:     28, // days
+		})
+	}
 
 	encoderCfg := zap.NewProductionEncoderConfig()
 	encoderCfg.TimeKey = "timestamp"
@@ -30,7 +48,7 @@ func NewLogger() *zap.SugaredLogger {
 	core := zapcore.NewCore(
 		zapcore.NewConsoleEncoder(encoderCfg),
 		w,
-		zap.InfoLevel,
+		conf.Level,
 	)
 
 	return zap.New(core).Sugar()

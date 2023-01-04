@@ -1,3 +1,5 @@
+//go:build unit
+
 package sms_test
 
 import (
@@ -52,7 +54,7 @@ func TestSend(t *testing.T) {
 		&http.Response{StatusCode: http.StatusOK}, nil,
 	)
 
-	s := sms.New(conf, logging.NewLogger(), sms.WithHTTPClient(mockClient))
+	s := sms.New(conf, logging.NewLogger(logging.LoggerConfig{}), sms.WithHTTPClient(mockClient))
 
 	err = s.Send(testrec, testmsg)
 
