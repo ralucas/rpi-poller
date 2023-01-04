@@ -82,11 +82,11 @@ func (c *Crawler) Crawl(sites []rpi.RPiSite) error {
 
 					err := c.notifier.Notify(message.New(subject, msg))
 					if err != nil {
-						c.logger.Infof("failed to send message: %+v", err)
+						c.logger.Errorf("failed to send message: %+v", err)
 					}
 				}
 
-				c.logger.Debugf("%s - %s : %s", result.Site.Name, result.ProductName, rpi.StatusToString(stockStatus))
+				c.logger.Infof("%s - %s : %s", result.Site.Name, result.ProductName, rpi.StatusToString(stockStatus))
 			}
 		}
 	}
@@ -122,7 +122,7 @@ func (c *Crawler) crawlSite(site rpi.RPiSite, errorc chan error, resultc chan []
 
 	actions = append(actions, selActions...)
 
-	c.logger.Debugf("navigating to %s\n", site.CategoryUrl)
+	c.logger.Infof("navigating to %s\n", site.CategoryUrl)
 
 	if err := chromedp.Run(ctx, actions...); err != nil {
 		errorc <- fmt.Errorf("failed crawling %s: %+v", site.CategoryUrl, err)
