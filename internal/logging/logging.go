@@ -15,7 +15,6 @@ type Logger interface {
 	Infof(string, ...interface{})
 }
 
-
 func NewLogger() *zap.SugaredLogger {
 	w := zapcore.AddSync(&lumberjack.Logger{
 		Filename:   "/var/log/rpipoller/rpipoller.log",
@@ -24,8 +23,12 @@ func NewLogger() *zap.SugaredLogger {
 		MaxAge:     28, // days
 	})
 
+	encoderCfg := zap.NewProductionEncoderConfig()
+	encoderCfg.TimeKey = "timestamp"
+	encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+
 	core := zapcore.NewCore(
-		zapcore.NewConsoleEncoder(zap.NewProductionEncoderConfig()),
+		zapcore.NewConsoleEncoder(encoderCfg),
 		w,
 		zap.InfoLevel,
 	)
