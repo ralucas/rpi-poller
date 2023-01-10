@@ -65,13 +65,10 @@ func (c *Crawler) Crawl(sites []rpi.RPiSite) error {
 		n += len(site.Products)
 	}
 
-	var errors []error
-
 	for i := 0; i < n; i++ {
 		select {
 		case err := <-errorc:
 			if err != nil {
-				errors = append(errors, err)
 				c.logger.Errorf(err.Error())
 			}
 		case result := <-resultc:
@@ -79,7 +76,6 @@ func (c *Crawler) Crawl(sites []rpi.RPiSite) error {
 
 			err := c.store.SetStockStatus(result.Site.Name, result.ProductName, stockStatus)
 			if err != nil {
-				errors = append(errors, err)
 				c.logger.Errorf(err.Error())
 				continue
 			}
@@ -100,36 +96,36 @@ func (c *Crawler) Crawl(sites []rpi.RPiSite) error {
 		}
 	}
 
-	if len(errors) > 0 {
-		// for now, report the first error
-		return fmt.Errorf("failed to crawl %d products [%v]", len(errors), errors[0])
-	}
-
 	return nil
 }
 
 func (c *Crawler) crawlSite(site rpi.RPiSite, errorc chan error, resultc chan *Result) {
-	var ctx context.Context
+	var chromedpOpts []func(*chromedp.Context)
 
-	// create context, ignore the initial cancel as one is given right next
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.config.BrowserTimeoutSec)*time.Second)
-	defer cancel()
+	allocatorOpts := chromedp.DefaultExecAllocatorOptions[:]
 
 	if c.config.Debug {
-		var cancel1 context.CancelFunc
-		ctx, cancel1 = chromedp.NewExecAllocator(ctx, append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("headless", false))...)
-		defer cancel1()
+		allocatorOpts = append(allocatorOpts, chromedp.Flag("headless", false), chromedp.CombinedOutput(logging.Writer(logging.FileOutput)))
+		chromedpOpts = append(chromedpOpts, chromedp.WithDebugf(c.logger.Infof))
+		c.logger.Infof("running the debug allocator...")
 	}
 
-	ctx, cancel2 := chromedp.NewContext(ctx)
-	defer cancel2()
+	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(), allocatorOpts...)
+	defer cancel()
+
+	ctx, cancel := chromedp.NewContext(allocatorCtx, chromedpOpts...)
+	defer cancel()
+
+	if c.config.BrowserTimeoutSec > 0 {
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(c.config.BrowserTimeoutSec)*time.Second)
+		defer cancel()
+	}
 
 	for _, product := range site.Products {
 		// starting tab
 		if err := chromedp.Run(ctx); err != nil {
-			c.logger.Fatalf("failed starting browser %v\n", err)
-			errorc <- err
-			return
+			errorc <- fmt.Errorf("failed starting browser to %s for %s: %+v", product.Url, product.Name, err)
+			cancel()
 		}
 		// Results are attached to the selectors and bound as pointers
 		// so they get passed back here as pointers to be populated
@@ -139,16 +135,15 @@ func (c *Crawler) crawlSite(site rpi.RPiSite, errorc chan error, resultc chan *R
 
 		c.logger.Infof("navigating to %s\n", product.Url)
 
-		if err := chromedp.Run(ctx, actions...); err != nil {
+		err := chromedp.Run(ctx, actions...)
+		if err != nil {
 			errorc <- fmt.Errorf("failed crawling %s for %s: %+v", product.Url, product.Name, err)
-			return
+			cancel()
+		} else {
+			resultc <- result
 		}
 
-		var cancel3 context.CancelFunc
-		ctx, cancel3 = chromedp.NewContext(ctx)
-		defer cancel3()
-
-		resultc <- result
+		ctx, cancel = chromedp.NewContext(ctx)
 	}
 }
 

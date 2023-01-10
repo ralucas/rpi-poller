@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"io"
 	"os"
 
 	"go.uber.org/zap"
@@ -29,17 +30,24 @@ type LoggerConfig struct {
 	Level  zapcore.Level
 }
 
-func NewLogger(conf LoggerConfig) *zap.SugaredLogger {
-	w := zapcore.AddSync(os.Stdout)
-
-	if conf.Output == FileOutput {
-		w = zapcore.AddSync(&lumberjack.Logger{
+func Writer(o LoggerOutput) io.Writer {
+	switch o {
+	case FileOutput:
+		return &lumberjack.Logger{
 			Filename:   "/var/log/rpipoller/rpipoller.log",
 			MaxSize:    500, // megabytes
 			MaxBackups: 3,
 			MaxAge:     28, // days
-		})
+		}
+	case StdoutOutput:
+		return os.Stdout
 	}
+
+	return nil
+}
+
+func NewLogger(conf LoggerConfig) *zap.SugaredLogger {
+	w := zapcore.AddSync(Writer(conf.Output))
 
 	encoderCfg := zap.NewProductionEncoderConfig()
 	encoderCfg.TimeKey = "timestamp"
